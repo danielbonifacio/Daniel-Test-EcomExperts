@@ -1217,13 +1217,23 @@ class VariantRadios extends VariantSelects {
 
   updateOptions() {
     const fieldsets = Array.from(this.querySelectorAll('fieldset'));
-    this.options = fieldsets.map((fieldset) => {
-      return Array.from(fieldset.querySelectorAll('input')).find((radio) => radio.checked).value;
-    });
+    this.options = [
+      ...fieldsets.map((fieldset) => {
+        return Array.from(fieldset.querySelectorAll('input')).find((radio) => radio.checked).value;
+      }),
+      ...Array.from(this.querySelectorAll('select'), (select) => select.value)
+    ];
   }
 }
 
 customElements.define('variant-radios', VariantRadios);
+
+// initialize al variant selects and variant radios with the "unselected" property selected
+window.addEventListener('load', () => {
+  document.querySelectorAll('variant-selects, variant-radios').forEach((variantSelect) => {
+    variantSelect.onVariantChange();
+  });
+})
 
 class ProductRecommendations extends HTMLElement {
   constructor() {
