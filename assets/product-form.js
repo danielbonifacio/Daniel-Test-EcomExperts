@@ -16,7 +16,33 @@ if (!customElements.get('product-form')) {
         this.hideErrors = this.dataset.hideErrors === 'true';
       }
 
-      onSubmitHandler(evt) {
+      async addTiedProductsToCart() {
+        const variantId = this.form.querySelector('[name=id]').value;
+        const tagsString = this.form.querySelector('[name=tags]').value;
+        const tags = tagsString.split(',').map((tag) => tag.trim());
+
+        const tiedProducts = tags
+          .filter((tag) => tag.startsWith('tie:'))
+          .map((tag) => tag.replace('tie:', '').split(':'));
+
+        const body = {
+          items: tiedProducts
+            .map((ids) => ids.includes(variantId) ? ({ id: ids[1], quantity: 1 }) : null)
+            .filter(a => a) // remove nulls
+        }
+
+        if (!body.items.length) return;
+
+        await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+      }
+
+      async onSubmitHandler(evt) {
         evt.preventDefault();
         if (this.submitButton.getAttribute('aria-disabled') === 'true') return;
 
@@ -40,6 +66,8 @@ if (!customElements.get('product-form')) {
           this.cart.setActiveElement(document.activeElement);
         }
         config.body = formData;
+
+        await this.addTiedProductsToCart();
 
         fetch(`${routes.cart_add_url}`, config)
           .then((response) => response.json())

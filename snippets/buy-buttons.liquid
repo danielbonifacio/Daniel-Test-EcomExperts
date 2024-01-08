@@ -61,6 +61,12 @@
           class="product-variant-id"
         >
 
+        <input 
+          type="hidden"
+          name="tags"
+          value="{{ product.tags | join: ', ' }}"
+        />
+
         {%- if gift_card_recipient_feature_active -%}
           {%- render 'gift-card-recipient-form', product: product, form: form, section: section -%}
         {%- endif -%}
