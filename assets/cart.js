@@ -2,11 +2,54 @@ class CartRemoveButton extends HTMLElement {
   constructor() {
     super();
 
-    this.addEventListener('click', (event) => {
-      event.preventDefault();
-      const cartItems = this.closest('cart-items') || this.closest('cart-drawer-items');
-      cartItems.updateQuantity(this.dataset.index, 0);
+    this.addEventListener('click', this.removeItemFromCart.bind(this));
+  }
+
+  getTiedItemsToBeRemoved (cart) {
+    const tiedVariantsIds = this.dataset.productTags
+      .split(',').map((tag) => tag.trim())
+      .filter((tag) => tag.startsWith('tie:'))
+      .map((tag) => tag.replace('tie:', '').split(':'));
+
+    // all cart items DOM elements
+    const cartItemElements = cart.querySelectorAll('.cart-item');
+
+    const cartItemsToBeRemoved = [];
+
+    cartItemElements.forEach((cartItemElement) => {
+      const productUrl = cartItemElement.querySelector('.cart-item__name').attributes.href.value;
+      const variantId = productUrl.split('?variant=')[1];
+
+      tiedVariantsIds.forEach((tiedVariantId) => {
+        if (tiedVariantId[1].includes(variantId) && tiedVariantId[0] === this.dataset.variantId) {
+          cartItemsToBeRemoved.push(variantId);
+        }
+      });
     });
+
+    return cartItemsToBeRemoved;
+  }
+
+  async removeItemsFromCartInPipeline (items, cart) {
+    for (const item of items) {
+      await cart.updateQuantity(null, 0, null, item);
+    }
+  }
+
+  async removeItselfFromCart (cart) {
+    await cart.updateQuantity(null, 0, null, this.dataset.variantId);
+  }
+
+  async removeItemFromCart(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const cart = this.closest('cart-items') || this.closest('cart-drawer-items');
+
+    const tiedProducts = this.getTiedItemsToBeRemoved(cart);
+
+    await this.removeItemsFromCartInPipeline(tiedProducts, cart);
+    await this.removeItselfFromCart(cart);
   }
 }
 
@@ -109,11 +152,12 @@ class CartItems extends HTMLElement {
     const body = JSON.stringify({
       line,
       quantity,
+      id: variantId,
       sections: this.getSectionsToRender().map((section) => section.section),
       sections_url: window.location.pathname,
     });
 
-    fetch(`${routes.cart_change_url}`, { ...fetchConfig(), ...{ body } })
+    return fetch(`${routes.cart_change_url}`, { ...fetchConfig(), ...{ body } })
       .then((response) => {
         return response.text();
       })
