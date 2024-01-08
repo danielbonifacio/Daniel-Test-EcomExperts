@@ -958,12 +958,12 @@ class VariantSelects extends HTMLElement {
     this.updatePickupAvailability();
     this.removeErrorMessage();
     this.updateVariantStatuses();
+    this.updateMedia();
 
     if (!this.currentVariant) {
       this.toggleAddButton(true, '', true);
       this.setUnavailable();
     } else {
-      this.updateMedia();
       this.updateURL();
       this.updateVariantInput();
       this.renderProductInfo();
@@ -986,6 +986,25 @@ class VariantSelects extends HTMLElement {
   }
 
   updateMedia() {
+    // some times, specially when unselect is the picked size, currentVariant is null
+    // or maybe the variant may not contain a featured media
+    // let's add a fallback media to it matching at least with color (or other variant available)
+
+    if (!this.currentVariant?.featured_media) {
+      function findMatchingVariantWithMedia (variants, availableOptions) {
+        return variants.find((variant) => 
+          variant.featured_image && availableOptions.some((option) => variant.options.includes(option))
+        ) || null
+      }
+
+      const fallbackMedia = findMatchingVariantWithMedia(this.getVariantData(), this.options);
+
+      const mediaGalleries = document.querySelectorAll(`[id^="MediaGallery-${this.dataset.section}"]`);
+      mediaGalleries.forEach((mediaGallery) =>
+        mediaGallery.setActiveMedia(`${this.dataset.section}-${fallbackMedia.featured_media.id}`, true)
+      );
+    }
+
     if (!this.currentVariant) return;
     if (!this.currentVariant.featured_media) return;
 
